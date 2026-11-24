@@ -21,12 +21,10 @@ if (out('git status --porcelain', root)) die('arbre git non propre : commite d\'
 if (out(`git tag -l ${tag}`, root)) die(`le tag ${tag} existe déjà : bumpe la version dans package.json.`);
 const changelog = readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8');
 // section « ## [X.Y.Z] … » jusqu'au prochain titre « ## »
-const lines = changelog.split(/?
-/);
+const lines = changelog.split(/\r?\n/);
 const start = lines.findIndex((l) => l.startsWith(`## [${version}]`) || l.startsWith(`## ${version}`));
 const end = start < 0 ? -1 : lines.findIndex((l, i) => i > start && l.startsWith('## '));
-const section = start < 0 ? '' : lines.slice(start + 1, end < 0 ? undefined : end).join('
-').trim();
+const section = start < 0 ? '' : lines.slice(start + 1, end < 0 ? undefined : end).join('\n').trim();
 if (!section) die(`aucune section « ## [${version}] » dans CHANGELOG.md.`);
 
 sh('npm ci', path.join(root, 'relay'));
@@ -39,7 +37,7 @@ const vsix = path.join(ext, `claude-remote-vscode-${version}.vsix`);
 if (!existsSync(vsix)) die('vsix introuvable : ' + vsix);
 
 const notes = path.join(ext, '.release-notes.md');
-writeFileSync(notes, m[1].trim() + '\n');
+writeFileSync(notes, section + '\n');
 sh(`git tag -a ${tag} -m "${tag}"`, root);
 sh('git push', root);
 sh(`git push origin ${tag}`, root);
