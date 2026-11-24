@@ -20,8 +20,14 @@ console.log(`Release ${tag}`);
 if (out('git status --porcelain', root)) die('arbre git non propre : commite d\'abord.');
 if (out(`git tag -l ${tag}`, root)) die(`le tag ${tag} existe déjà : bumpe la version dans package.json.`);
 const changelog = readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8');
-const m = changelog.match(new RegExp(`^## \[?${version.replace(/\./g, '\.')}\]?.*$([\s\S]*?)(?=^## |$(?![\s\S]))`, 'm'));
-if (!m || !m[1].trim()) die(`aucune section « ## [${version}] » dans CHANGELOG.md.`);
+// section « ## [X.Y.Z] … » jusqu'au prochain titre « ## »
+const lines = changelog.split(/?
+/);
+const start = lines.findIndex((l) => l.startsWith(`## [${version}]`) || l.startsWith(`## ${version}`));
+const end = start < 0 ? -1 : lines.findIndex((l, i) => i > start && l.startsWith('## '));
+const section = start < 0 ? '' : lines.slice(start + 1, end < 0 ? undefined : end).join('
+').trim();
+if (!section) die(`aucune section « ## [${version}] » dans CHANGELOG.md.`);
 
 sh('npm ci', path.join(root, 'relay'));
 sh('npm ci');
