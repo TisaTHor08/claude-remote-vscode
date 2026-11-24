@@ -26,23 +26,28 @@ tout l'état (chats, runs Claude en cours) vit sur l'hôte et se resynchronise a
 
 ## Installation
 
-### 1. Relais (une fois, sur ton serveur)
+### 1. Relais (une fois, sur ton serveur ou ton NAS)
 
-Prérequis : Docker + Docker Compose, un nginx avec TLS (Let's Encrypt…).
+**Sur un NAS (Synology Container Manager « Projet », QNAP, Portainer…)** : suis [docs/NAS.md](docs/NAS.md)
+(liste exacte des fichiers à copier, reverse proxy DSM, mise à jour).
+
+**Sur un serveur Linux** (Docker + Docker Compose, nginx avec TLS) :
 
 ```bash
 git clone https://github.com/TisaTHor08/claude-remote-vscode && cd claude-remote-vscode
 cp .env.example .env && sed -i "s/^RELAY_TOKEN=.*/RELAY_TOKEN=$(openssl rand -hex 32)/" .env
 docker compose up -d --build
+curl http://127.0.0.1:47821/healthz   # → ok
 cat .env    # note le RELAY_TOKEN : il sera demandé dans l'extension
 ```
 
 Ajoute ensuite le bloc de [`nginx.conf.example`](nginx.conf.example) dans ton `server { listen 443 ssl; … }` puis `nginx -s reload`.
-Le conteneur n'écoute que sur `127.0.0.1:8787` ; c'est nginx qui l'expose en TLS.
+Le conteneur n'écoute que sur **`127.0.0.1:47821`** (port exotique pour éviter les conflits, modifiable via `RELAY_PORT` dans `.env`) ;
+c'est le reverse proxy qui l'expose en TLS.
 
-➡ URL à utiliser dans l'extension : **`wss://ton-domaine/claude-remote/ws`**
+➡ URL à utiliser dans l'extension : **`wss://ton-domaine/claude-remote/ws`** (nginx) ou **`wss://ton-domaine/ws`** (proxy DSM).
 
-> Sans nginx, pour un essai en local : `ws://127.0.0.1:8787/ws` (le chemin **`/ws`** est obligatoire).
+> Sans reverse proxy, pour un essai en local : `ws://127.0.0.1:47821/ws` (le chemin **`/ws`** est obligatoire).
 
 ### 2. Extension (sur chaque poste : machine hôte et clients)
 
@@ -88,7 +93,7 @@ une notification propose **Mettre à jour** (téléchargement + installation du 
 ### Relais
 
 ```bash
-cd claude-remote-vscode && git pull && docker compose up -d --build
+cd claude-remote-vscode && git pull && docker compose up -d --build   # NAS : voir docs/NAS.md §4
 ```
 
 Les machines hôtes et les clients se reconnectent automatiquement après le redémarrage du relais.

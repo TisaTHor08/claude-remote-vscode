@@ -1,6 +1,6 @@
 # Dans le bloc server { listen 443 ssl; server_name remote.ton-domaine.fr; ... } existant :
 location /claude-remote/ {
-    proxy_pass http://127.0.0.1:8787/;          # le "/" final retire le préfixe -> /ws
+    proxy_pass http://127.0.0.1:47821/;         # le "/" final retire le préfixe -> /ws
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "upgrade";

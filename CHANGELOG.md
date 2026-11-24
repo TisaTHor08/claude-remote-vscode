@@ -3,6 +3,12 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions [SemVer](https://semver.org/lang/fr/).
 La section d'une version sert de notes de release sur GitHub.
 
+## [Non publié]
+
+### Modifié
+- Relais : port publié **47821** par défaut (configurable via `RELAY_PORT` / `RELAY_BIND` dans `.env`), build Docker reproductible (`npm ci`).
+- Guide d'installation sur NAS (docs/NAS.md).
+
 ## [0.2.0] - 2026-11-24
 
 ### Ajouté

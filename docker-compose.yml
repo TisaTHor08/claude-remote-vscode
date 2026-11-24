@@ -1,3 +1,5 @@
+# Relais Claude Remote. Fonctionne tel quel en « projet » (Synology Container Manager, QNAP, Portainer…)
+# ou en ligne de commande : docker compose up -d --build
 services:
   relay:
     build: ./relay
@@ -5,6 +7,8 @@ services:
     restart: unless-stopped
     environment:
       RELAY_TOKEN: ${RELAY_TOKEN:?définis RELAY_TOKEN dans .env (openssl rand -hex 32)}
-    # Exposé uniquement en local : c'est nginx qui publie le service en TLS.
+    # Port exotique pour éviter les conflits (modifiable dans .env : RELAY_PORT).
+    # 127.0.0.1 : accessible seulement par le reverse proxy de la machine (recommandé).
+    # Mets RELAY_BIND=0.0.0.0 si ton reverse proxy tourne sur une autre machine / un autre conteneur.
     ports:
-      - "127.0.0.1:8787:8787"
+      - "${RELAY_BIND:-127.0.0.1}:${RELAY_PORT:-47821}:8787"
