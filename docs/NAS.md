@@ -52,8 +52,13 @@ Le relais écoute sur **`127.0.0.1:47821`** (port exotique, uniquement local). P
 * **nginx** : bloc prêt à l'emploi dans [`nginx.conf.example`](../nginx.conf.example) →
   URL `wss://ton-domaine/claude-remote/ws`.
 
-Si le reverse proxy tourne dans un autre conteneur ou sur une autre machine, mets `RELAY_BIND=0.0.0.0`
-(et ne publie jamais ce port directement sur Internet sans TLS).
+* **Nginx Proxy Manager** (souvent en conteneur) : Proxy Host → domaine `vs.ton-domaine.fr`, scheme `http`,
+  IP du NAS (ex. `192.168.1.26`), port `47821`, cocher **Websockets Support**, onglet SSL → Let's Encrypt.
+  URL pour l'extension : **`wss://vs.ton-domaine.fr/ws`**.
+
+⚠ Si le reverse proxy contacte le relais via l'IP du NAS (Nginx Proxy Manager en conteneur, autre machine…),
+mets **`RELAY_BIND=0.0.0.0`** dans `.env`, sinon il obtient **502 Bad Gateway**. Dans ce cas, n'ouvre/ne redirige
+**pas** le port 47821 sur ta box : seul le reverse proxy (443) doit être exposé à Internet.
 
 ## 4. Mettre à jour le relais
 
