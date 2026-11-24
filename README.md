@@ -68,7 +68,7 @@ Il n'y a pas encore de validation interactive des outils depuis le client : ce q
   client, sans accès au projet complet.
 * Fichiers lus jusqu'à 12 Mo. Le chat s'appuie sur le CLI `claude` (`-p --output-format stream-json`) déjà installé et connecté sur l'hôte
   (sous Windows, renseigne `claudeRemote.claude.path` vers `claude.exe` si la détection échoue).
-* L'extension n'a pas encore été éprouvée longuement dans VS Code même ; le relais et le cœur du protocole sont couverts par un test d'intégration.
+* Le partage, l'ouverture d'un projet distant et l'édition dans l'éditeur sont couverts par un test E2E dans de vrais VS Code ; le chat est couvert par le test d'intégration du cœur (pas encore par l'E2E).
 
 ## Développement
 
@@ -76,6 +76,8 @@ Il n'y a pas encore de validation interactive des outils depuis le client : ce q
 cd extension && npm install
 npm run typecheck
 npm test            # lance un vrai relais + hôte + client (24 vérifications)
+npm run test:e2e    # relais + DEUX vrais VS Code (hôte et client) pilotés automatiquement
+                    # (CODE_EXE=chemin/vers/Code.exe pour utiliser le VS Code installé)
 ```
 
 Licence MIT.

@@ -6,11 +6,17 @@ export const SCHEME = 'claude-remote';
 export interface Relay { url: string; token: string }
 
 /** Crée le fournisseur de clés d'un projet : réutilise les clés mémorisées (SecretStorage), sinon demande le mot de passe. */
-export function makeKeysProvider(secrets: vscode.SecretStorage, projectId: string, label: string): KeysProvider {
+export function makeKeysProvider(secrets: vscode.SecretStorage, projectId: string, label: string, presetPassword?: string): KeysProvider {
   let lock: Promise<unknown> = Promise.resolve();
   return (salt, retry) => {
     const run = async () => {
       const k = `claudeRemote.viewer.${projectId}`;
+      if (presetPassword !== undefined) {
+        if (retry) { await secrets.delete(k); return undefined; } // mot de passe fourni par programme et refusé : pas de boucle
+        const keys = await deriveKeys(presetPassword, salt);
+        await secrets.store(k, JSON.stringify(serializeKeys(keys)));
+        return keys;
+      }
       if (!retry) {
         const raw = await secrets.get(k);
         if (raw) { const s = JSON.parse(raw) as StoredKeys; if (s.salt === salt) return parseKeys(s); }

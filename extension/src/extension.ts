@@ -112,15 +112,17 @@ export function activate(ctx: vscode.ExtensionContext) {
       projects.refresh();
     }),
 
-    vscode.commands.registerCommand('claudeRemote.share', async () => {
+    // args optionnels { name, password } : permettent l'automatisation (tests E2E, raccourcis)
+    vscode.commands.registerCommand('claudeRemote.share', async (args?: { name?: string; password?: string }) => {
       const folder = vscode.workspace.workspaceFolders?.find((f) => f.uri.scheme === 'file');
       if (!folder) { vscode.window.showWarningMessage('Ouvre d\'abord un dossier de projet.'); return; }
       if (!(await getRelay())) { await vscode.commands.executeCommand('claudeRemote.configure'); if (!(await getRelay())) return; }
-      const name = await vscode.window.showInputBox({ title: 'Nom du projet partagé', value: path.basename(folder.uri.fsPath), ignoreFocusOut: true });
+      const name = args?.name ?? await vscode.window.showInputBox({ title: 'Nom du projet partagé', value: path.basename(folder.uri.fsPath), ignoreFocusOut: true });
       if (!name) return;
-      const pw = await vscode.window.showInputBox({ title: 'Mot de passe de synchronisation', prompt: 'Il sera exigé sur tout autre poste pour ouvrir ce projet. 12 caractères minimum.', password: true, ignoreFocusOut: true, validateInput: (v) => passwordProblem(v) });
+      if (args?.password !== undefined) { const pb = passwordProblem(args.password); if (pb) throw new Error(pb); }
+      const pw = args?.password ?? await vscode.window.showInputBox({ title: 'Mot de passe de synchronisation', prompt: 'Il sera exigé sur tout autre poste pour ouvrir ce projet. 12 caractères minimum.', password: true, ignoreFocusOut: true, validateInput: (v) => passwordProblem(v) });
       if (!pw) return;
-      const pw2 = await vscode.window.showInputBox({ title: 'Confirme le mot de passe', password: true, ignoreFocusOut: true, validateInput: (v) => (v === pw ? undefined : 'Ne correspond pas.') });
+      const pw2 = args?.password ?? await vscode.window.showInputBox({ title: 'Confirme le mot de passe', password: true, ignoreFocusOut: true, validateInput: (v) => (v === pw ? undefined : 'Ne correspond pas.') });
       if (!pw2) return;
       const existing = hosts().find((h) => h.root === folder.uri.fsPath);
       const rec: HostRecord = { projectId: existing?.projectId ?? newProjectId(name), name, root: folder.uri.fsPath };
@@ -128,6 +130,7 @@ export function activate(ctx: vscode.ExtensionContext) {
       await ctx.secrets.store(hostSecretKey(rec.projectId), JSON.stringify(serializeKeys(keys)));
       await ctx.globalState.update(HOSTS_KEY, [...hosts().filter((h) => h.root !== rec.root), rec]);
       await startHost(rec, keys);
+      if (args) return rec.projectId;
       vscode.window.showInformationMessage(`« ${name} » est synchronisé. Depuis un autre VS Code : Claude Remote > Projets connectés.`);
     }),
 
@@ -142,7 +145,8 @@ export function activate(ctx: vscode.ExtensionContext) {
 
     vscode.commands.registerCommand('claudeRemote.refresh', () => projects.refresh()),
 
-    vscode.commands.registerCommand('claudeRemote.openProject', async (p?: ProjectInfo) => {
+    // opts optionnels { password, open } : open=false authentifie sans ouvrir de fenêtre (renvoie true/false)
+    vscode.commands.registerCommand('claudeRemote.openProject', async (p?: ProjectInfo, opts?: { password?: string; open?: boolean }) => {
       const relay = await getRelay();
       if (!relay) { await vscode.commands.executeCommand('claudeRemote.configure'); return; }
       if (!p) {
@@ -153,15 +157,23 @@ export function activate(ctx: vscode.ExtensionContext) {
       }
       // authentification dans cette fenêtre (les clés vont dans le trousseau partagé), puis ouverture dans une nouvelle fenêtre
       const ok = await new Promise<boolean>((resolve) => {
-        const c = new ProjectConnection(relay.url, relay.token, p!.id, makeKeysProvider(ctx.secrets, p!.id, p!.name));
-        const t = setTimeout(() => { c.stop(); vscode.window.showErrorMessage('Relais injoignable.'); resolve(false); }, 30000);
+        const c = new ProjectConnection(relay.url, relay.token, p!.id, makeKeysProvider(ctx.secrets, p!.id, p!.name, opts?.password));
+        // stop() émet « closed » de façon synchrone : on fige le résultat AVANT d'arrêter la connexion
+        let done = false;
+        const finish = (v: boolean, err?: string) => {
+          if (done) return; done = true; clearTimeout(t);
+          if (err && !opts) vscode.window.showErrorMessage('Claude Remote : ' + err);
+          resolve(v); c.stop();
+        };
+        const t = setTimeout(() => finish(false, 'relais injoignable.'), 30000);
         c.on('status', (s: string, d?: string) => {
-          if (s === 'connected' || s === 'host-offline') { clearTimeout(t); c.stop(); resolve(true); }
-          else if (s === 'auth-failed' || s === 'closed') { clearTimeout(t); vscode.window.showErrorMessage('Claude Remote : ' + (d || s)); resolve(false); }
+          log(`ouverture ${p!.id} : ${s}${d ? ' — ' + d : ''}`);
+          if (s === 'connected' || s === 'host-offline') finish(true);
+          else if (s === 'auth-failed' || s === 'closed') finish(false, d || s);
         });
         c.start();
       });
-      if (!ok) return;
+      if (!ok || opts?.open === false) return ok;
       await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.from({ scheme: SCHEME, authority: p.id, path: '/' }), { forceNewWindow: true });
     }),
 
