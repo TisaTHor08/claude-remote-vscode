@@ -1,5 +1,8 @@
 # Claude Remote for VS Code
 
+[![CI](https://github.com/TisaTHor08/claude-remote-vscode/actions/workflows/ci.yml/badge.svg)](https://github.com/TisaTHor08/claude-remote-vscode/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/TisaTHor08/claude-remote-vscode)](https://github.com/TisaTHor08/claude-remote-vscode/releases/latest)
+
 Un « vrai remote » **VS Code → VS Code** passant par **ton propre serveur** (Docker + nginx) :
 tu synchronises un projet depuis ta machine, puis tu l'ouvres depuis n'importe quel autre poste comme un
 dossier normal (arborescence, lecture/édition de fichiers) avec un **chat Claude Code** intégré.
@@ -17,35 +20,99 @@ tout l'état (chats, runs Claude en cours) vit sur l'hôte et se resynchronise a
         chiffrement de bout en bout (AES-256-GCM, clé dérivée du mot de passe) — le relais ne voit que du chiffré
 ```
 
+**Sommaire** — [Installation](#installation) · [Utilisation](#utilisation) · [Mises à jour](#mises-à-jour) ·
+[Réglages](#réglages) · [Sécurité](#sécurité) · [Limites](#limites-actuelles) · [Dépannage](#dépannage) · [Développement](#développement)
+
+---
+
 ## Installation
 
-### 1. Relais (sur ton serveur)
+### 1. Relais (une fois, sur ton serveur)
+
+Prérequis : Docker + Docker Compose, un nginx avec TLS (Let's Encrypt…).
 
 ```bash
 git clone https://github.com/TisaTHor08/claude-remote-vscode && cd claude-remote-vscode
 cp .env.example .env && sed -i "s/^RELAY_TOKEN=.*/RELAY_TOKEN=$(openssl rand -hex 32)/" .env
 docker compose up -d --build
+cat .env    # note le RELAY_TOKEN : il sera demandé dans l'extension
 ```
 
-Puis ajoute le bloc de [`nginx.conf.example`](nginx.conf.example) dans ton `server { listen 443 ssl; … }` et recharge nginx.
-L'URL à utiliser dans l'extension est alors `wss://ton-domaine/claude-remote/ws`. Le conteneur n'écoute que sur `127.0.0.1:8787`.
+Ajoute ensuite le bloc de [`nginx.conf.example`](nginx.conf.example) dans ton `server { listen 443 ssl; … }` puis `nginx -s reload`.
+Le conteneur n'écoute que sur `127.0.0.1:8787` ; c'est nginx qui l'expose en TLS.
 
-### 2. Extension (sur chaque poste)
+➡ URL à utiliser dans l'extension : **`wss://ton-domaine/claude-remote/ws`**
+
+> Sans nginx, pour un essai en local : `ws://127.0.0.1:8787/ws` (le chemin **`/ws`** est obligatoire).
+
+### 2. Extension (sur chaque poste : machine hôte et clients)
+
+1. Télécharge le fichier **`.vsix`** de la [dernière release](https://github.com/TisaTHor08/claude-remote-vscode/releases/latest).
+2. Installe-le : `code --install-extension claude-remote-vscode-X.Y.Z.vsix`
+   (ou, dans VS Code : vue Extensions → `…` → *Install from VSIX…*).
+3. Commande **Claude Remote: Configurer le relais** : URL `wss://…/claude-remote/ws` + `RELAY_TOKEN`
+   (le token est rangé dans le trousseau sécurisé de VS Code, pas dans les réglages).
+
+Sur la machine **hôte**, le [CLI Claude Code](https://docs.claude.com/claude-code) doit être installé et connecté (`claude` dans le PATH).
+
+## Utilisation
+
+**Sur la machine du projet (hôte)**
+1. Ouvre le dossier du projet dans VS Code.
+2. Clique sur **« Synchroniser »** dans la barre d'état (ou commande *Claude Remote: Synchroniser ce projet*).
+3. Choisis un nom et un **mot de passe fort** (12 caractères minimum).
+
+La synchronisation reprend toute seule au redémarrage de VS Code (sans ressaisir le mot de passe).
+Pour arrêter : clic sur l'indicateur de la barre d'état, ou *Claude Remote: Arrêter la synchronisation*.
+
+**Sur l'autre poste (client)**
+1. Icône **Claude Remote** de la barre d'activité → **Projets connectés**.
+2. Clic sur le projet → mot de passe (demandé une fois par poste).
+3. Le projet s'ouvre dans une nouvelle fenêtre : édite les fichiers normalement, et utilise le panneau
+   **Chat Claude** pour reprendre un chat existant ou en créer un nouveau (Claude s'exécute sur l'hôte).
+
+## Mises à jour
+
+### Extension : automatique
+
+Au démarrage de VS Code puis toutes les 12 h, l'extension consulte les
+[Releases GitHub](https://github.com/TisaTHor08/claude-remote-vscode/releases). Si une version plus récente existe,
+une notification propose **Mettre à jour** (téléchargement + installation du `.vsix`, puis rechargement de la fenêtre),
+**Notes de version** ou **Ignorer cette version**.
+
+* Vérification manuelle : commande **Claude Remote: Rechercher des mises à jour**.
+* Désactiver : réglage `claudeRemote.updates.check` à `false`.
+* Fork : pointe `claudeRemote.updates.repo` vers ton dépôt (`propriétaire/nom`, qui doit être **public**).
+
+> Mets à jour l'extension **sur tous les postes** (hôte et clients) : ils doivent parler la même version du protocole.
+
+### Relais
 
 ```bash
-cd extension && npm install && npm run package   # produit claude-remote-vscode-0.1.0.vsix
-code --install-extension claude-remote-vscode-0.1.0.vsix
+cd claude-remote-vscode && git pull && docker compose up -d --build
 ```
 
-Commande **Claude Remote: Configurer le relais** : URL `wss://…` + `RELAY_TOKEN` (stocké dans le trousseau de VS Code).
+Les machines hôtes et les clients se reconnectent automatiquement après le redémarrage du relais.
 
-### 3. Utilisation
+### Publier une nouvelle version (mainteneur)
 
-* **Sur la machine du projet** : ouvre le dossier → barre d'état « Synchroniser » (ou commande *Synchroniser ce projet*) →
-  choisis un **mot de passe fort** (12 caractères minimum). La synchronisation reprend toute seule au redémarrage de VS Code.
-* **Sur l'autre poste** : icône *Claude Remote* de la barre d'activité → **Projets connectés** → clic sur le projet →
-  mot de passe (demandé une fois par poste) → le projet s'ouvre dans une nouvelle fenêtre. Le panneau **Chat Claude** permet de
-  reprendre un chat existant ou d'en créer d'autres.
+Voir [docs/RELEASING.md](docs/RELEASING.md) — en bref : bump de `version` dans `extension/package.json`,
+section dans [CHANGELOG.md](CHANGELOG.md), puis `git tag vX.Y.Z && git push --tags`.
+GitHub Actions teste, construit le `.vsix` et crée la release ; les extensions installées la proposent ensuite d'elles-mêmes.
+
+## Réglages
+
+| Réglage | Défaut | Rôle |
+|---|---|---|
+| `claudeRemote.relayUrl` | — | URL WebSocket du relais (`wss://…/claude-remote/ws`). |
+| `claudeRemote.autoResume` | `true` | Reprendre le partage des projets au démarrage de VS Code. |
+| `claudeRemote.claude.path` | auto | Chemin du binaire `claude` (sous Windows : `claude.exe`, ou un `cli.js` lancé via Node). |
+| `claudeRemote.claude.permissionMode` | `acceptEdits` | Mode de permissions des chats lancés à distance. |
+| `claudeRemote.claude.allowedTools` | lecture, édition, `git status/diff/log` | Outils autorisés sans confirmation dans les chats distants. |
+| `claudeRemote.updates.check` | `true` | Vérifier automatiquement les nouvelles versions. |
+| `claudeRemote.updates.repo` | `TisaTHor08/claude-remote-vscode` | Dépôt GitHub source des mises à jour. |
+
+Variable d'environnement `CLAUDE_REMOTE_RELAY_TOKEN` : token de repli si aucun n'est enregistré (tests, CI, postes scriptés).
 
 ## Sécurité
 
@@ -56,28 +123,51 @@ Commande **Claude Remote: Configurer le relais** : URL `wss://…` + `RELAY_TOKE
 | Chiffrement | AES-256-GCM sur toutes les requêtes/réponses/évènements, AAD par direction, horodatage + identifiant anti-rejeu. |
 | Anti brute-force | 5 échecs → verrouillage 10 min par (IP, projet). Re-synchroniser avec un autre mot de passe invalide les anciens clients. |
 | Chemins | Toute opération est confinée à la racine du projet (`..`, liens symboliques sortants et suppression de la racine refusés). |
+| Mises à jour | Téléchargées uniquement en HTTPS depuis `github.com` (assets de release), installées par VS Code. |
 
 ⚠ **Qui connaît le mot de passe peut piloter Claude sur la machine hôte.** Les permissions des chats distants se règlent dans
-`claudeRemote.claude.permissionMode` (défaut `acceptEdits`) et `claudeRemote.claude.allowedTools` ; n'utilise `bypassPermissions` qu'en connaissance de cause.
+`claudeRemote.claude.permissionMode` et `claudeRemote.claude.allowedTools` ; n'utilise `bypassPermissions` qu'en connaissance de cause.
 Il n'y a pas encore de validation interactive des outils depuis le client : ce qui n'est pas autorisé est refusé.
 
-## Limites actuelles (v0.1)
+## Limites actuelles
 
 * Ce n'est **pas** un Remote-SSH complet : l'éditeur lit/écrit les fichiers à distance, mais **pas de terminal, de git, de
   débogage, ni de recherche dans tous les fichiers** ; les extensions de langage (TypeScript, Python…) tournent sur le poste
   client, sans accès au projet complet.
-* Fichiers lus jusqu'à 12 Mo. Le chat s'appuie sur le CLI `claude` (`-p --output-format stream-json`) déjà installé et connecté sur l'hôte
-  (sous Windows, renseigne `claudeRemote.claude.path` vers `claude.exe` si la détection échoue).
-* Le partage, l'ouverture d'un projet distant et l'édition dans l'éditeur sont couverts par un test E2E dans de vrais VS Code ; le chat est couvert par le test d'intégration du cœur (pas encore par l'E2E).
+* Fichiers lus jusqu'à 12 Mo.
+* Le chat s'appuie sur le CLI `claude` (`-p --output-format stream-json`) déjà installé et connecté sur l'hôte.
+
+## Dépannage
+
+| Symptôme | Piste |
+|---|---|
+| « Aucun projet trouvé » | Vérifie l'URL (elle doit finir par `/ws`) et le token : *Configurer le relais*. Journaux : *Claude Remote: Afficher les journaux*. |
+| « token refusé » dans la barre d'état | Le `RELAY_TOKEN` saisi ne correspond pas au `.env` du serveur. |
+| « trop d'essais » | 5 mauvais mots de passe : attends 10 min. |
+| Le chat ne démarre pas | Sur l'hôte, `claude --version` doit fonctionner ; sinon renseigne `claudeRemote.claude.path`. |
+| Pas de notification de mise à jour | Commande *Rechercher des mises à jour* ; le dépôt doit être public et avoir une release avec un `.vsix`. |
 
 ## Développement
 
 ```bash
-cd extension && npm install
+cd relay && npm ci && cd ../extension && npm ci
 npm run typecheck
-npm test            # lance un vrai relais + hôte + client (24 vérifications)
+npm test            # relais + hôte + client réels, sans VS Code (24 vérifications)
 npm run test:e2e    # relais + DEUX vrais VS Code (hôte et client) pilotés automatiquement
-                    # (CODE_EXE=chemin/vers/Code.exe pour utiliser le VS Code installé)
+npm run package     # produit claude-remote-vscode-X.Y.Z.vsix
+```
+
+`npm run test:e2e` télécharge VS Code au premier lancement ; `CODE_EXE=/chemin/vers/Code.exe` utilise celui déjà installé.
+Sous Linux sans écran : `xvfb-run -a npm run test:e2e`. La CI GitHub exécute les deux suites à chaque push.
+
+Structure :
+
+```
+relay/                 serveur relais (Node + ws), image Docker
+extension/src/core/    protocole, chiffrement, hôte, client, lanceur Claude — sans dépendance à VS Code
+extension/src/         intégration VS Code (FileSystemProvider, vues, commandes, mises à jour)
+extension/test/        test d'intégration du cœur + test E2E dans de vrais VS Code
+.github/workflows/     CI (tests) et Release (publication du .vsix sur tag vX.Y.Z)
 ```
 
 Licence MIT.

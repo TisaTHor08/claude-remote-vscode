@@ -5,6 +5,7 @@ import {
 } from './core';
 import { RemoteFs, SCHEME, Relay, makeKeysProvider } from './remoteFs';
 import { ChatView, ProjectsProvider } from './views';
+import { setupUpdater } from './updater';
 import { ProjectConnection } from './core';
 
 interface HostRecord { projectId: string; name: string; root: string }
@@ -16,6 +17,7 @@ export function activate(ctx: vscode.ExtensionContext) {
   const out = vscode.window.createOutputChannel('Claude Remote');
   const log = (m: string) => out.appendLine(`${new Date().toLocaleTimeString()} ${m}`);
   ctx.subscriptions.push(out);
+  setupUpdater(ctx, log);
 
   const getRelay = async (): Promise<Relay | undefined> => {
     const url = vscode.workspace.getConfiguration('claudeRemote').get<string>('relayUrl', '').trim();

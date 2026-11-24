@@ -2,7 +2,7 @@
   "name": "claude-remote-vscode",
   "displayName": "Claude Remote (VS Code to VS Code)",
   "description": "Ouvre tes projets VS Code à distance via ton propre relais : arborescence, édition de fichiers et chats Claude Code, chiffrés de bout en bout, résistants aux coupures 5G.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "tisathor08",
   "license": "MIT",
   "engines": {
@@ -75,6 +75,10 @@
       {
         "command": "claudeRemote.showLog",
         "title": "Claude Remote: Afficher les journaux"
+      },
+      {
+        "command": "claudeRemote.checkUpdates",
+        "title": "Claude Remote: Rechercher des mises à jour"
       }
     ],
     "menus": {
@@ -136,6 +140,18 @@
             "Bash(git log *)"
           ],
           "description": "Outils autorisés sans confirmation dans les chats distants (syntaxe de règles de permission de Claude Code)."
+        },
+        "claudeRemote.updates.check": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Vérifier au démarrage (puis toutes les 12 h) si une nouvelle version est publiée sur GitHub et proposer de l'installer."
+        },
+        "claudeRemote.updates.repo": {
+          "type": "string",
+          "default": "TisaTHor08/claude-remote-vscode",
+          "scope": "application",
+          "description": "Dépôt GitHub (propriétaire/nom) dont les Releases fournissent les mises à jour (.vsix). Il doit être public."
         }
       }
     }
@@ -158,5 +174,9 @@
   },
   "dependencies": {
     "ws": "^8.18.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TisaTHor08/claude-remote-vscode"
   }
 }

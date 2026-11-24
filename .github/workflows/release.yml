@@ -1,0 +1,41 @@
+name: Release
+
+# Publier une version : bump "version" dans extension/package.json, compléter CHANGELOG.md,
+# puis `git tag vX.Y.Z && git push --tags`. Les extensions installées proposeront la mise à jour.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Le tag correspond à la version du package
+        run: |
+          V=$(node -p "require('./package.json').version")
+          [ "v$V" = "$GITHUB_REF_NAME" ] || { echo "Tag $GITHUB_REF_NAME ≠ version v$V de package.json"; exit 1; }
+      - run: npm ci --prefix ../relay
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: xvfb-run -a npm run test:e2e
+      - run: npm run package
+      - name: Notes de version depuis CHANGELOG.md
+        run: |
+          V=${GITHUB_REF_NAME#v}
+          awk -v v="$V" '$0 ~ "^## \[?"v"\]?" {f=1; next} /^## / {f=0} f' ../CHANGELOG.md > ../notes.md
+          [ -s ../notes.md ] || echo "Version $V" > ../notes.md
+      - name: Créer la release GitHub avec le .vsix
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" *.vsix --title "$GITHUB_REF_NAME" --notes-file ../notes.md
