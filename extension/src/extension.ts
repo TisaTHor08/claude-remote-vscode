@@ -19,7 +19,7 @@ export function activate(ctx: vscode.ExtensionContext) {
 
   const getRelay = async (): Promise<Relay | undefined> => {
     const url = vscode.workspace.getConfiguration('claudeRemote').get<string>('relayUrl', '').trim();
-    const token = await ctx.secrets.get(TOKEN_KEY);
+    const token = (await ctx.secrets.get(TOKEN_KEY)) || process.env.CLAUDE_REMOTE_RELAY_TOKEN || undefined;
     return url && token ? { url, token } : undefined;
   };
 
