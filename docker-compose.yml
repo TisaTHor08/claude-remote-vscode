@@ -1,0 +1,10 @@
+services:
+  relay:
+    build: ./relay
+    container_name: claude-remote-relay
+    restart: unless-stopped
+    environment:
+      RELAY_TOKEN: ${RELAY_TOKEN:?définis RELAY_TOKEN dans .env (openssl rand -hex 32)}
+    # Exposé uniquement en local : c'est nginx qui publie le service en TLS.
+    ports:
+      - "127.0.0.1:8787:8787"

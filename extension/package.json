@@ -1,0 +1,83 @@
+{
+  "name": "claude-remote-vscode",
+  "displayName": "Claude Remote (VS Code to VS Code)",
+  "description": "Ouvre tes projets VS Code à distance via ton propre relais : arborescence, édition de fichiers et chats Claude Code, chiffrés de bout en bout, résistants aux coupures 5G.",
+  "version": "0.1.0",
+  "publisher": "tisathor08",
+  "license": "MIT",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other"],
+  "main": "./out/extension.js",
+  "activationEvents": ["onStartupFinished", "onFileSystem:claude-remote"],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [{ "id": "claudeRemote", "title": "Claude Remote", "icon": "media/icon.svg" }]
+    },
+    "views": {
+      "claudeRemote": [
+        { "id": "claudeRemote.projects", "name": "Projets connectés" },
+        { "id": "claudeRemote.chat", "name": "Chat Claude", "type": "webview", "when": "claudeRemote.inRemote" }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "claudeRemote.projects",
+        "contents": "Aucun projet trouvé.\n[Configurer le relais](command:claudeRemote.configure)\n[Synchroniser ce projet](command:claudeRemote.share)"
+      }
+    ],
+    "commands": [
+      { "command": "claudeRemote.configure", "title": "Claude Remote: Configurer le relais" },
+      { "command": "claudeRemote.share", "title": "Claude Remote: Synchroniser ce projet" },
+      { "command": "claudeRemote.stopSharing", "title": "Claude Remote: Arrêter la synchronisation" },
+      { "command": "claudeRemote.refresh", "title": "Claude Remote: Actualiser les projets", "icon": "$(refresh)" },
+      { "command": "claudeRemote.openProject", "title": "Claude Remote: Ouvrir un projet distant" },
+      { "command": "claudeRemote.forgetPassword", "title": "Claude Remote: Oublier le mot de passe de ce projet" },
+      { "command": "claudeRemote.showLog", "title": "Claude Remote: Afficher les journaux" }
+    ],
+    "menus": {
+      "view/title": [{ "command": "claudeRemote.refresh", "when": "view == claudeRemote.projects", "group": "navigation" }]
+    },
+    "configuration": {
+      "title": "Claude Remote",
+      "properties": {
+        "claudeRemote.relayUrl": {
+          "type": "string", "default": "", "scope": "application",
+          "description": "URL WebSocket du relais, ex. wss://remote.exemple.fr/claude-remote/ws"
+        },
+        "claudeRemote.autoResume": {
+          "type": "boolean", "default": true, "scope": "application",
+          "description": "Reprendre automatiquement la synchronisation des projets partagés au démarrage de VS Code (sans ressaisir le mot de passe)."
+        },
+        "claudeRemote.claude.path": {
+          "type": "string", "default": "", "scope": "machine",
+          "description": "Chemin du binaire claude (claude.exe sous Windows). Vide = détection automatique."
+        },
+        "claudeRemote.claude.permissionMode": {
+          "type": "string", "default": "acceptEdits", "scope": "machine",
+          "enum": ["default", "acceptEdits", "plan", "bypassPermissions"],
+          "description": "Mode de permissions des chats lancés à distance. ATTENTION : bypassPermissions donne à quiconque connaît le mot de passe la main complète sur cette machine."
+        },
+        "claudeRemote.claude.allowedTools": {
+          "type": "array", "items": { "type": "string" }, "scope": "machine",
+          "default": ["Read", "Glob", "Grep", "Edit", "Write", "Bash(git status *)", "Bash(git diff *)", "Bash(git log *)"],
+          "description": "Outils autorisés sans confirmation dans les chats distants (syntaxe de règles de permission de Claude Code)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "node esbuild.mjs --test && node test/integration.test.js",
+    "package": "npm run build && vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.85.0",
+    "@types/ws": "^8.5.12",
+    "@vscode/vsce": "^3.2.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": { "ws": "^8.18.0" }
+}
