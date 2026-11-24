@@ -1,6 +1,5 @@
 # Claude Remote for VS Code
 
-[![CI](https://github.com/TisaTHor08/claude-remote-vscode/actions/workflows/ci.yml/badge.svg)](https://github.com/TisaTHor08/claude-remote-vscode/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/TisaTHor08/claude-remote-vscode)](https://github.com/TisaTHor08/claude-remote-vscode/releases/latest)
 
 Un « vrai remote » **VS Code → VS Code** passant par **ton propre serveur** (Docker + nginx) :
@@ -96,9 +95,9 @@ Les machines hôtes et les clients se reconnectent automatiquement après le red
 
 ### Publier une nouvelle version (mainteneur)
 
-Voir [docs/RELEASING.md](docs/RELEASING.md) — en bref : bump de `version` dans `extension/package.json`,
-section dans [CHANGELOG.md](CHANGELOG.md), puis `git tag vX.Y.Z && git push --tags`.
-GitHub Actions teste, construit le `.vsix` et crée la release ; les extensions installées la proposent ensuite d'elles-mêmes.
+Bump de `version` dans `extension/package.json`, section dans [CHANGELOG.md](CHANGELOG.md), commit, puis dans `extension/` :
+`npm run release` (tests, build du `.vsix`, tag et release GitHub depuis ton poste). Détails : [docs/RELEASING.md](docs/RELEASING.md).
+Les extensions installées proposent ensuite la nouvelle version d'elles-mêmes.
 
 ## Réglages
 
@@ -159,7 +158,7 @@ npm run package     # produit claude-remote-vscode-X.Y.Z.vsix
 ```
 
 `npm run test:e2e` télécharge VS Code au premier lancement ; `CODE_EXE=/chemin/vers/Code.exe` utilise celui déjà installé.
-Sous Linux sans écran : `xvfb-run -a npm run test:e2e`. La CI GitHub exécute les deux suites à chaque push.
+Sous Linux sans écran : `xvfb-run -a npm run test:e2e`. Les workflows GitHub (CI, Release) sont en déclenchement manuel.
 
 Structure :
 
@@ -168,7 +167,8 @@ relay/                 serveur relais (Node + ws), image Docker
 extension/src/core/    protocole, chiffrement, hôte, client, lanceur Claude — sans dépendance à VS Code
 extension/src/         intégration VS Code (FileSystemProvider, vues, commandes, mises à jour)
 extension/test/        test d'intégration du cœur + test E2E dans de vrais VS Code
-.github/workflows/     CI (tests) et Release (publication du .vsix sur tag vX.Y.Z)
+.github/workflows/     CI et Release GitHub Actions (déclenchement manuel)
+extension/scripts/     release.mjs : publication d'une release depuis ton poste
 ```
 
 Licence MIT.

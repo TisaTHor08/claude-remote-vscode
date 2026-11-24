@@ -1,13 +1,19 @@
 name: Release
 
-# Publier une version : bump "version" dans extension/package.json, compléter CHANGELOG.md,
-# puis `git tag vX.Y.Z && git push --tags`. Les extensions installées proposeront la mise à jour.
+# Alternative CI au script local `npm run release` (voir docs/RELEASING.md).
+# Déclenchement manuel : Actions → Release → Run workflow, en indiquant un tag vX.Y.Z déjà poussé.
 on:
-  push:
-    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag à publier (ex. v0.3.0), déjà poussé'
+        required: true
 
 permissions:
   contents: write
+
+env:
+  GITHUB_REF_NAME: ${{ inputs.tag }}
 
 jobs:
   release:
@@ -17,6 +23,8 @@ jobs:
         working-directory: extension
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20

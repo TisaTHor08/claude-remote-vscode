@@ -1,9 +1,9 @@
 name: CI
 
+# Déclenchement manuel (onglet Actions → CI → Run workflow) : pas de minutes consommées à chaque push.
+# Pour l'activer à chaque push : remplacer par  on: { push: { branches: [main] }, pull_request: {} }
 on:
-  push:
-    branches: [main]
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   test:

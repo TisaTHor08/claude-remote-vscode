@@ -5,3 +5,4 @@ out-test/
 .env
 *.zip
 .vscode-test/
+.release-notes.md
