@@ -3,6 +3,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY server.js ./
+# Les fichiers copiés depuis un NAS (ACL Synology…) peuvent être illisibles pour l'utilisateur « node » :
+# on rend /app lisible par tous, sans droit d'écriture.
+RUN chmod -R a+rX,go-w /app
 USER node
 ENV PORT=8787
 EXPOSE 8787

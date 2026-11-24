@@ -7,6 +7,9 @@ La section d'une version sert de notes de release sur GitHub.
 
 ### Modifié
 - Relais : port publié **47821** par défaut (configurable via `RELAY_PORT` / `RELAY_BIND` dans `.env`), build Docker reproductible (`npm ci`).
+
+### Corrigé
+- Relais sur NAS : `EACCES: permission denied, open '/app/server.js'` quand les fichiers copiés avaient des droits restrictifs (ACL Synology).
 - Guide d'installation sur NAS (docs/NAS.md).
 
 ## [0.2.0] - 2026-11-24
