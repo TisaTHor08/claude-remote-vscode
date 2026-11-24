@@ -135,7 +135,7 @@ Il n'y a pas encore de validation interactive des outils depuis le client : ce q
   débogage, ni de recherche dans tous les fichiers** ; les extensions de langage (TypeScript, Python…) tournent sur le poste
   client, sans accès au projet complet.
 * Fichiers lus jusqu'à 12 Mo.
-* Le chat s'appuie sur le CLI `claude` (`-p --output-format stream-json`) déjà installé et connecté sur l'hôte.
+* Le chat s'appuie sur le CLI `claude` (détecté automatiquement : `~/.local/bin`, extension Claude Code pour VS Code, PATH) (`-p --output-format stream-json`) déjà installé et connecté sur l'hôte.
 
 ## Dépannage
 
@@ -154,6 +154,7 @@ cd relay && npm ci && cd ../extension && npm ci
 npm run typecheck
 npm test            # relais + hôte + client réels, sans VS Code (24 vérifications)
 npm run test:e2e    # relais + DEUX vrais VS Code (hôte et client) pilotés automatiquement
+npm run test:claude # avec le VRAI Claude Code de l'hôte, piloté depuis un client distant (consomme quelques tokens)
 npm run package     # produit claude-remote-vscode-X.Y.Z.vsix
 ```
 

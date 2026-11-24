@@ -9,6 +9,7 @@ La section d'une version sert de notes de release sur GitHub.
 - Mises à jour automatiques : vérification des Releases GitHub au démarrage puis toutes les 12 h, installation en un clic.
 - Commande *Claude Remote: Rechercher des mises à jour* et réglages `claudeRemote.updates.check` / `claudeRemote.updates.repo`.
 - Test E2E lançant un relais et deux vrais VS Code (hôte et client).
+- Test `npm run test:claude` avec le vrai Claude Code de l'hôte (outil Read, reprise de chat, liste des chats).
 - CI GitHub Actions et publication automatique du `.vsix` sur tag.
 - Repli du token relais sur la variable d'environnement `CLAUDE_REMOTE_RELAY_TOKEN`.
 

@@ -161,7 +161,8 @@
     "typecheck": "tsc --noEmit -p .",
     "test": "node esbuild.mjs --test && node test/integration.test.js",
     "package": "npm run build && vsce package --no-dependencies",
-    "test:e2e": "npm run build && node test/e2e/run.js"
+    "test:e2e": "npm run build && node test/e2e/run.js",
+    "test:claude": "node esbuild.mjs --test && node test/real-claude.test.js"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
